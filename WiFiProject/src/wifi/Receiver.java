@@ -13,12 +13,12 @@ public class Receiver implements Runnable {
 	RF theRF;
 	
 	public Receiver(RF theRF) {
-		queue = new ArrayList();
+		queue = new ArrayList<byte[]>();
 		this.theRF = theRF;
 	}
 
 	public void run() {
-		while(1 == 1) {
+		for(;;) {
 			byte[] packet = theRF.receive();
 			queue.add(packet);
 		}

@@ -52,16 +52,26 @@ public class LinkLayer implements Dot11Interface {
     * the Transmission object.  See docs for full description.
     */
    public int recv(Transmission t) {
-      while(receiver.queue.isEmpty() == true);
-      byte[] packet = receiver.queue.remove(0);
-      FrameMaker parser = new FrameMaker();
-      short dest = parser.getDest(packet);
-      short src = parser.getSrc(packet);
-      byte[] data = parser.getData(packet);
-      t.setSourceAddr(src);
-      t.setDestAddr(dest);
-      t.setBuf(data);
-      return data.length;
+	  for(;;) {
+		  try {
+              Thread.sleep(10);
+           } 
+		  catch (InterruptedException e) {
+              // Do nothing
+           }   
+		  if(receiver.queue.isEmpty() != true) {
+	    	  byte[] packet = receiver.queue.remove(0);
+		      FrameMaker parser = new FrameMaker();
+		      short dest = parser.getDest(packet);
+		      short src = parser.getSrc(packet);
+		      byte[] data = parser.getData(packet);
+		      t.setSourceAddr(src);
+		      t.setDestAddr(dest);
+		      t.setBuf(data);
+		      return data.length; 
+		  }
+	  }
+     
    }
 
    /**

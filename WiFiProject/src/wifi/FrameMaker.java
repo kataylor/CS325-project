@@ -17,12 +17,12 @@ public class FrameMaker {
 	
 	public byte[] makeDataFrame(short dest, short src, int crc) {
 		byte[] cont = setControl("000", "0", 0);
-		frame = new byte[10 + packetData.length];
+		byte[] frame = new byte[10 + packetData.length];
 		frame[0] = cont[0];
 		frame[1] = cont[1];
-		frame[2] = (byte)(dest & 0xff);
+		frame[2] = (byte)(dest);
 		frame[3] = (byte)((dest >> 8) & 0xff);
-		frame[4] = (byte)(src & 0xff);
+		frame[4] = (byte)(src);
 		frame[5] = (byte)((src >> 8) & 0xff);
 		for(int i = 0; i < packetData.length; i++) {
 			frame[i+6] = packetData[i];
@@ -47,48 +47,19 @@ public class FrameMaker {
 		return b;
 	}
 	
-	public static void main(String[] args) {
-		String s = "hello 24601";
-		byte[] bytes = s.getBytes();
-		System.out.println("The number of bytes in the data is "+bytes.length);
-		FrameMaker make = new FrameMaker(bytes);
-		short dest = 1001;
-		short src = 383;
-		int crc = 0;
-		byte[] packet = make.makeDataFrame(dest, src, crc);
-		
-		short value1 = packet[3];
-		value1 = (short) ((value1 << 8) | packet[2]);
-		
-		short value2 = packet[5];
-		value2 = (short) ((value2 << 8) | packet[4]);
-		
-		System.out.println("this is the dest: " + value1);
-		System.out.println("this is the src: " + value2);
-		
-		byte[] data = getData(packet);
-		String s2 = new String(data);
-		System.out.println(s2);
-		
-		make.toString();
-		make.toBinaryString();
-	}
-	
 	public short getDest(byte[] pack) {
-		short value1 = pack[2];
-		value1 = (short) ((pack[3] << 8) | pack[2]);
-		return value1;
+		short newshort = (short) ((pack[3] << 8) + (pack[2]&0xFF));
+		return newshort;
 	}
 	
 	public short getSrc(byte[] pack) {
-		short value2 = pack[4];
-		value2 = (short) ((pack[5] << 8) | pack[4]);
-		return value2;
+		short newshort = (short) ((pack[5] << 8) + (pack[4]&0xFF));
+		return newshort;
 	}
 	
-	public static byte[] getData(byte[] pack) {
+	public byte[] getData(byte[] pack) {
 		int len = pack.length-10;
-		byte[] data = new byte[2038];
+		byte[] data = new byte[pack.length-10];
 		for(int i = 0; i < len; i++) {
 			data[i] = pack[i+6];
 		}
