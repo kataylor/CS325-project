@@ -39,7 +39,7 @@ public class LinkLayer implements Dot11Interface {
       FrameMaker theFrame = new FrameMaker(data);
       byte[] theDataFrame = theFrame.makeDataFrame(dest, ourMAC, 0); //set control info to zero because we turn the crc to all ones in makeDataFrame
       Sender sender = new Sender(theRF, theDataFrame);
-      theRF.transmit(theDataFrame);
+      //theRF.transmit(theDataFrame);
       
       //start the thread
       (new Thread(sender)).start();
@@ -52,23 +52,23 @@ public class LinkLayer implements Dot11Interface {
     * the Transmission object.  See docs for full description.
     */
    public int recv(Transmission t) {
-	  for(;;) {
+	  for(;;) { //run forever
 		  try {
-              Thread.sleep(10);
+              Thread.sleep(10);//sleep
            } 
 		  catch (InterruptedException e) {
               // Do nothing
            }   
-		  if(receiver.queue.isEmpty() != true) {
-	    	  byte[] packet = receiver.queue.remove(0);
-		      FrameMaker parser = new FrameMaker();
-		      short dest = parser.getDest(packet);
-		      short src = parser.getSrc(packet);
-		      byte[] data = parser.getData(packet);
-		      t.setSourceAddr(src);
+		  if(receiver.queue.isEmpty() != true) { //when the queue isn't empty
+	    	  byte[] packet = receiver.queue.remove(0); //get the packet
+		      FrameMaker parser = new FrameMaker(); 
+		      short dest = parser.getDest(packet); //get out the destination address
+		      short src = parser.getSrc(packet); //get out the source address
+		      byte[] data = parser.getData(packet); //get out the data
+		      t.setSourceAddr(src); //put everything in the transmission object
 		      t.setDestAddr(dest);
 		      t.setBuf(data);
-		      return data.length; 
+		      return data.length; //return amount of data received
 		  }
 	  }
      

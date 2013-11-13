@@ -7,8 +7,8 @@ public class Sender implements Runnable {
 	byte[] data;
 
 	public Sender(RF theRF, byte[] data) {
-		theRF = this.theRF;
-		data = this.data;
+		this.theRF = theRF;
+		this.data = data;
 	}
 
 	public void run() {
