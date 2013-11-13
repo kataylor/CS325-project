@@ -369,7 +369,6 @@ public class WiFiClient implements ActionListener, Runnable {
             }
          }
       }
-
    }
 
 

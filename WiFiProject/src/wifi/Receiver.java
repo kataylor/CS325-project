@@ -13,6 +13,7 @@ public class Receiver implements Runnable {
 	RF theRF;
 	
 	public Receiver(RF theRF) {
+		queue = new ArrayList();
 		this.theRF = theRF;
 	}
 
