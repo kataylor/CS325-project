@@ -1,3 +1,7 @@
+/**
+ * A class that sends items from the link layer.
+ * @author Christopher Livingston
+ */
 package wifi;
 
 import rf.RF;

@@ -35,7 +35,6 @@ public class LinkLayer implements Dot11Interface {
     */
    public int send(short dest, byte[] data, int len) {
       output.println("LinkLayer: Sending "+len+" bytes to "+dest);
-     
       FrameMaker theFrame = new FrameMaker(data);
       byte[] theDataFrame = theFrame.makeDataFrame(dest, ourMAC, 0); //set control info to zero because we turn the crc to all ones in makeDataFrame
       Sender sender = new Sender(theRF, theDataFrame);

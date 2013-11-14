@@ -2,19 +2,36 @@ package wifi;
 
 public class FrameMaker {
 	
-	private byte[] packetData;
-	byte[] frame;
+	/**
+	 * A class that makes frames to send and parses ones received.
+	 * @author Christopher Livingston and Kirah Taylor
+	 */
 	
+	private byte[] packetData; //the specific packet of data that needs to be packed in a frame
+	byte[] frame; //the frame being created
+	
+	/**
+	 * A constructor that makes a new frame around given data for sending
+	 * @param data The data to be packed in the frame
+	 */
 	public FrameMaker(byte[] data) {
 		packetData = data;
 	}
 	
-	/*
+	/**
+	 * A constructor to make an instance of FrameMaker for the purpose of parsing
 	 */
 	public FrameMaker() {
 		//do nothing
 	}
 	
+	/**
+	 * A method to make a data frame
+	 * @param dest The destination address
+	 * @param src The source address
+	 * @param crc The checksum
+	 * @return A byte array of the data frame
+	 */
 	public byte[] makeDataFrame(short dest, short src, int crc) {
 		byte[] cont = setControl("000", "0", 0);
 		byte[] frame = new byte[10 + packetData.length];
@@ -34,6 +51,13 @@ public class FrameMaker {
 		return frame;
 	}
 	
+	/**
+	 * A method to set the control bits of a frame
+	 * @param type A string representation of three bits setting the type of frame to be made (eg ACK, data, etc)
+	 * @param retry A string representation of the one bit that signals if the packet is a retry 
+	 * @param sequence An integer containing the checksum
+	 * @return Returns a binary array of the control information
+	 */
 	public byte[] setControl(String type, String retry, int sequence) {
 		String seq = Integer.toBinaryString(sequence);
 		String total = type + retry + seq;
@@ -47,16 +71,31 @@ public class FrameMaker {
 		return b;
 	}
 	
+	/**
+	 * A method for extracting the destination address from a frame
+	 * @param pack The frame to extract the address from
+	 * @return A short of the destination address
+	 */
 	public short getDest(byte[] pack) {
 		short newshort = (short) ((pack[3] << 8) + (pack[2]&0xFF));
 		return newshort;
 	}
 	
+	/**
+	 * A method for extracting the source address from a frame
+	 * @param pack The frame to extract the address from
+	 * @return A short of the source address
+	 */
 	public short getSrc(byte[] pack) {
 		short newshort = (short) ((pack[5] << 8) + (pack[4]&0xFF));
 		return newshort;
 	}
 	
+	/**
+	 * A method to get the data from a frame
+	 * @param pack The packet to extract data from
+	 * @return A byte array containing the data packet
+	 */
 	public byte[] getData(byte[] pack) {
 		int len = pack.length-10;
 		byte[] data = new byte[pack.length-10];
@@ -66,7 +105,7 @@ public class FrameMaker {
 		return data;
 	}
 	
-	/*
+	/**
 	 * Returns a binary representation of the frame.
 	 * 
 	 * @returns binaryString
@@ -80,7 +119,7 @@ public class FrameMaker {
 		return binaryString;
 	}
 	
-	/*
+	/**
 	 * Returns a String representation of the packet.
 	 * 
 	 * @Override
