@@ -25,7 +25,7 @@ public class LinkLayer implements Dot11Interface {
       this.output = output;      
       theRF = new RF(null, null);
       output.println("LinkLayer: Constructor ran.");
-      receiver = new Receiver(theRF, ourMAC);
+      receiver = new Receiver(theRF, ourMAC, output);
       (new Thread(receiver)).start();
    }
 

@@ -40,12 +40,12 @@ public class FrameMaker {
 		frame[1] = cont[1];
 		
 		//Set the destination address 
-		frame[2] = (byte)(dest);
-		frame[3] = (byte)((dest >> 8) & 0xff);
+		frame[3] = (byte)(dest);
+		frame[2] = (byte)((dest >> 8) & 0xff);
 		
 		//Set the source address
-		frame[4] = (byte)(src);
-		frame[5] = (byte)((src >> 8) & 0xff);
+		frame[5] = (byte)(src);
+		frame[4] = (byte)((src >> 8) & 0xff);
 		
 		//put the data into the frame.
 		for(int i = 0; i < packetData.length; i++) {
@@ -57,10 +57,26 @@ public class FrameMaker {
 		frame[packetData.length+7] = (byte)255;
 		frame[packetData.length+8] = (byte)255;
 		frame[packetData.length+9] = (byte)255;
-		
-		toBinaryString();
 		return frame;
 	}
+	
+	
+	public byte[] makeACKFrame(short dest, short src, int crc, int seq) {
+		byte[] cont = setControl("001", "0", seq);
+		byte[] frame = new byte[10];
+		frame[0] = cont[0];
+		frame[1] = cont[1];
+		frame[3] = (byte)(dest);
+		frame[2] = (byte)((dest >> 8) & 0xff);
+		frame[5] = (byte)(src);
+		frame[4] = (byte)((src >> 8) & 0xff);
+		frame[6] = (byte)255;
+		frame[7] = (byte)255;
+		frame[8] = (byte)255;
+		frame[9] = (byte)255;
+		return frame;
+	}
+	
 	
 	/**
 	 * A method to set the control bits of a frame
@@ -82,13 +98,22 @@ public class FrameMaker {
 		return b;
 	}
 	
+	
+	public int getSequnceNumber(byte[] packet) {
+		String s = toBinaryString(packet);
+		String n = s.substring(4, 16);
+		int seq = Integer.parseInt(n, 2);
+		return seq;
+	}
+	
+	
 	/**
 	 * A method for extracting the destination address from a frame
 	 * @param pack The frame to extract the address from
 	 * @return A short of the destination address
 	 */
 	public short getDest(byte[] pack) {
-		short newshort = (short) ((pack[3] << 8) + (pack[2]&0xFF));
+		short newshort = (short) ((pack[2] << 8) + (pack[3]&0xFF));
 		return newshort;
 	}
 	
@@ -98,7 +123,7 @@ public class FrameMaker {
 	 * @return A short of the source address
 	 */
 	public short getSrc(byte[] pack) {
-		short newshort = (short) ((pack[5] << 8) + (pack[4]&0xFF));
+		short newshort = (short) ((pack[4] << 8) + (pack[5]&0xFF));
 		return newshort;
 	}
 	
@@ -116,17 +141,26 @@ public class FrameMaker {
 		return data;
 	}
 	
+	public boolean isACK(byte[] packet) {
+		String pack = toBinaryString(packet);
+		if(pack.startsWith("001") == true) {
+			return true;
+		}
+		return false;
+	}
+	
+	
 	/**
 	 * Returns a binary representation of the frame.
 	 * 
 	 * @returns binaryString
 	 */
-	public String toBinaryString(){
+	public String toBinaryString(byte[] frame){
 		String binaryString = ""; // Initialize a new empty String.
 		for(int i=0; i<=frame.length-1; i++){
-			binaryString += ("0000000"+Integer.toBinaryString(0xFF & frame[i])).replaceAll(".*(.{8})$", "$1") + " ";
+			binaryString += ("0000000"+Integer.toBinaryString(0xFF & frame[i])).replaceAll(".*(.{8})$", "$1");
 		}
-		System.out.println("The binary representation of this frame is: " + binaryString);
+		//System.out.println("The binary representation of this frame is: " + binaryString);
 		return binaryString;
 	}
 	

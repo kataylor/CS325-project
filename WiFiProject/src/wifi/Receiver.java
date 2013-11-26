@@ -1,5 +1,6 @@
 package wifi;
 
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import rf.RF;
 
@@ -9,23 +10,30 @@ import rf.RF;
  */
 public class Receiver implements Runnable {
 	
-	ArrayList<byte[]> queue; //the current queue in use; will be changed to a better data structure in the future
-	RF theRF;
 	
 	//Added for Address Selectivity
 	short ourMAC; //our MAC address. Used to determine if incoming packets are for us or not.
 	short broadcastAddress = (short)((Integer.MAX_VALUE >>8) & 0xffff); //the broadcast address is a short of all 1's. (11111111 11111111)
-	
+	ArrayList<byte[]> queue; //the current queue in use; will be changed to a better data structure in the future
+	ArrayList<Integer> ACKqueue;
+	RF theRF;
+	FrameMaker parser;
+	private PrintWriter output;
+	int[][] sequences;
 	
 	/**
 	 * Constructor.
 	 * @param theRF
 	 * @param ourMAC
 	 */
-	public Receiver(RF theRF, short ourMAC) { //<<Changed constructor for Address Selectivity
+	public Receiver(RF theRF, short ourMAC, PrintWriter output) { //<<Changed constructor for Address Selectivity
 		queue = new ArrayList<byte[]>();
+		ACKqueue = new ArrayList<Integer>();
 		this.theRF = theRF;
+		parser = new FrameMaker();
 		this.ourMAC = ourMAC;
+		this.output = output;
+		sequences = new int[1000][2];
 	}
 	
 	/**
@@ -53,11 +61,41 @@ public class Receiver implements Runnable {
 	public void run() {
 		for(;;) {
 			byte[] packet = theRF.receive(); //blocks until something is received 
-			
+			int seq = parser.getSequnceNumber(packet);
 			//ADDED for Address selectivity.
 			//Only packets with our MAC addresses will be queued for delivery.
 			if(forUs(packet)){
-				queue.add(packet); //add received item to the queue 
+				if(parser.isACK(packet) == true) {
+					ACKqueue.add(seq);
+					continue;
+				}
+				short dest = parser.getSrc(packet);
+				
+				boolean wasRecvd = false;
+				if(sequences[dest][1] == seq) {
+					wasRecvd = true;
+				}
+				else {
+					if(seq > (sequences[dest][1])+1) {
+						System.out.println("seq is " + seq + " and had stored " + sequences[dest][1]);
+						output.println("Gap detected in packet arrival!");
+					}
+					sequences[dest][1] = seq;
+				}
+				if(wasRecvd == false) {
+					queue.add(packet); //add received item to the queue
+					if(dest != (short)(Integer.MAX_VALUE >> 8)-1) {
+						byte[] ack = parser.makeACKFrame(dest, ourMAC, 0, seq);
+						try {
+							Thread.sleep(theRF.aSIFSTime);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						theRF.transmit(ack);
+					}
+					
+				}
 			}
 			else{
 				System.out.println("The recived packet is not for us...");
