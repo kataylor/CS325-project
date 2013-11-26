@@ -35,19 +35,30 @@ public class FrameMaker {
 	public byte[] makeDataFrame(short dest, short src, int crc) {
 		byte[] cont = setControl("000", "0", 0);
 		byte[] frame = new byte[10 + packetData.length];
+		//Set the control
 		frame[0] = cont[0];
 		frame[1] = cont[1];
+		
+		//Set the destination address 
 		frame[2] = (byte)(dest);
 		frame[3] = (byte)((dest >> 8) & 0xff);
+		
+		//Set the source address
 		frame[4] = (byte)(src);
 		frame[5] = (byte)((src >> 8) & 0xff);
+		
+		//put the data into the frame.
 		for(int i = 0; i < packetData.length; i++) {
 			frame[i+6] = packetData[i];
 		}
+		
+		//Set the control
 		frame[packetData.length+6] = (byte)255;
 		frame[packetData.length+7] = (byte)255;
 		frame[packetData.length+8] = (byte)255;
 		frame[packetData.length+9] = (byte)255;
+		
+		toBinaryString();
 		return frame;
 	}
 	

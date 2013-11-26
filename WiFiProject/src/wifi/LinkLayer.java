@@ -25,7 +25,7 @@ public class LinkLayer implements Dot11Interface {
       this.output = output;      
       theRF = new RF(null, null);
       output.println("LinkLayer: Constructor ran.");
-      receiver = new Receiver(theRF);
+      receiver = new Receiver(theRF, ourMAC);
       (new Thread(receiver)).start();
    }
 
@@ -38,8 +38,7 @@ public class LinkLayer implements Dot11Interface {
       FrameMaker theFrame = new FrameMaker(data);
       byte[] theDataFrame = theFrame.makeDataFrame(dest, ourMAC, 0); //set control info to zero because we turn the crc to all ones in makeDataFrame
       Sender sender = new Sender(theRF, theDataFrame);
-      //theRF.transmit(theDataFrame);
-      
+   
       //start the thread
       (new Thread(sender)).start();
       
