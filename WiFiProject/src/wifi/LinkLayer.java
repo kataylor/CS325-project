@@ -18,7 +18,7 @@ public class LinkLayer implements Dot11Interface {
    private Receiver receiver;
    Integer[][] sequenceTable;
    private LinkedList<byte[]> queue;
-   long timeout = (long) 10000;
+   long timeout = (long) 100;
 
    /**
     * Constructor takes a MAC address and the PrintWriter to which our output will
@@ -40,7 +40,7 @@ public class LinkLayer implements Dot11Interface {
 	public boolean ACKReceived(int seqNum){
 		//System.out.println("In ACKReceived!!!!!!");
 		for(int i = 0; i<receiver.ACKqueue.size(); i++){
-			if(receiver.ACKqueue.get(i) == seqNum){
+			if(receiver.ACKqueue.get(i).equals(seqNum)){
 				System.out.println("We found our ACK!");
 				return true;
 			}
@@ -52,8 +52,8 @@ public class LinkLayer implements Dot11Interface {
 	public boolean gotPacket(int seq, byte[]data) {
 		System.out.println("About to check for a packet!");
 		long runStart = theRF.clock();
+		int retry = 0;
 		for(;;) {
-			int retry = 0;
 			if(retry == RF.dot11RetryLimit){
 				//end
 				System.out.println("I give up!");
@@ -145,11 +145,10 @@ public class LinkLayer implements Dot11Interface {
 		   if(parser.isACK(data)) {
 			   
 		   }
-		   gotPacket(seq, theDataFrame);
+		   else{
+			   gotPacket(seq, theDataFrame);
+		   }
 		}
-	   
-    
-   
    return len;
 }
 

@@ -13,7 +13,7 @@ public class Sender implements Runnable {
 	byte[] data;
 	int[] window = new int[0]; // Size will be changed in changeWindowSize
 	Random randomGen = new Random();
-	long timeout = (long) 10000; // timeout
+	long timeout = (long) 1000; // timeout
 	FrameMaker parser;
 	int seqNum;
 	long runStart;
