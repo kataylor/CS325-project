@@ -32,8 +32,8 @@ public class FrameMaker {
 	 * @param crc The checksum
 	 * @return A byte array of the data frame
 	 */
-	public byte[] makeDataFrame(short dest, short src, int crc) {
-		byte[] cont = setControl("000", "0", 0);
+	public byte[] makeDataFrame(short dest, short src, int crc, int seq) {
+		byte[] cont = setControl("000", "0", seq);
 		byte[] frame = new byte[10 + packetData.length];
 		//Set the control
 		frame[0] = cont[0];
@@ -87,18 +87,23 @@ public class FrameMaker {
 	 */
 	public byte[] setControl(String type, String retry, int sequence) {
 		String seq = Integer.toBinaryString(sequence);
-		String total = type + retry + seq;
-		while(total.length() < 16) {
-			total = total + "0";
+		String total = seq;
+		int totalLength = total.length();
+		String zeroes = "";
+		while(totalLength < 16) {
+			zeroes = zeroes + "0";
+			totalLength++;
 		}
+		total = zeroes + total;
+		total = type + retry + total;
 		byte[] b = new byte[2];
 				//new BigInteger(total, 2).toByteArray();
 		b[0] = Byte.parseByte(total.substring(0, 7), 2);
 		b[1] = Byte.parseByte(total.substring(8), 2);
 		return b;
 	}
-	
-	
+
+
 	public int getSequnceNumber(byte[] packet) {
 		String s = toBinaryString(packet);
 		String n = s.substring(4, 16);

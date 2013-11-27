@@ -13,6 +13,7 @@ public class LinkLayer implements Dot11Interface {
    private short ourMAC;       // Our MAC address
    private PrintWriter output; // The output stream we'll write to
    private Receiver receiver;
+   Integer[][] sequenceTable;
 
    /**
     * Constructor takes a MAC address and the PrintWriter to which our output will
@@ -21,6 +22,7 @@ public class LinkLayer implements Dot11Interface {
     * @param output  Output stream associated with GUI
     */
    public LinkLayer(short ourMAC, PrintWriter output) {
+	  sequenceTable = new Integer[1000][2];
       this.ourMAC = ourMAC;
       this.output = output;      
       theRF = new RF(null, null);
@@ -34,16 +36,25 @@ public class LinkLayer implements Dot11Interface {
     * of bytes to send.  See docs for full description.
     */
    public int send(short dest, byte[] data, int len) {
-      output.println("LinkLayer: Sending "+len+" bytes to "+dest);
-      FrameMaker theFrame = new FrameMaker(data);
-      byte[] theDataFrame = theFrame.makeDataFrame(dest, ourMAC, 0); //set control info to zero because we turn the crc to all ones in makeDataFrame
-      Sender sender = new Sender(theRF, theDataFrame);
+	   int seq = 0;
+	   if(sequenceTable[dest][1] != null) {
+		   seq = sequenceTable[dest][1];
+	   }
+	   else{
+		   sequenceTable[dest][1] = 0;
+	   }
+	   sequenceTable[dest][1]++;
+	   output.println("The ingoing sequence number is: " + seq);
+    output.println("LinkLayer: Sending "+len+" bytes to "+dest);
+    FrameMaker theFrame = new FrameMaker(data);
+    byte[] theDataFrame = theFrame.makeDataFrame(dest, ourMAC, 0, seq); //set control info to zero because we turn the crc to all ones in makeDataFrame
+    Sender sender = new Sender(theRF, theDataFrame);
+
+   //start the thread
+    (new Thread(sender)).start();
    
-      //start the thread
-      (new Thread(sender)).start();
-      
-      return len;
-   }
+   return len;
+}
 
    /**
     * Recv method blocks until data arrives, then writes it an address info into

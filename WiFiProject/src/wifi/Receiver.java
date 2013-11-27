@@ -47,7 +47,6 @@ public class Receiver implements Runnable {
 
 		FrameMaker frame = new FrameMaker(packet);
 		short destAddress = frame.getDest(packet);
-		System.out.println("The destAddress is: " + destAddress);
 		
 		if(destAddress == ourMAC || destAddress == broadcastAddress){
 			isValid = true;
@@ -71,9 +70,11 @@ public class Receiver implements Runnable {
 		for(;;) {
 			byte[] packet = theRF.receive(); //blocks until something is received 
 			int seq = parser.getSequnceNumber(packet);
+			//ADDED for Address selectivity.
 			//Only packets with our MAC addresses will be queued for delivery.
 			if(forUs(packet)){
 				if(parser.isACK(packet) == true) {
+					System.out.println("The seqnum is: " + seq);
 					ACKqueue.add(seq);
 					continue;
 				}
@@ -92,7 +93,8 @@ public class Receiver implements Runnable {
 				}
 				if(wasRecvd == false) {
 					queue.add(packet); //add received item to the queue
-					if(dest != (short)(Integer.MAX_VALUE >> 8)-1) {
+					if(parser.getDest(packet) != broadcastAddress) {
+						System.out.println("gonna send an ack!");
 						byte[] ack = parser.makeACKFrame(dest, ourMAC, 0, seq);
 						try {
 							Thread.sleep(theRF.aSIFSTime);
@@ -105,9 +107,7 @@ public class Receiver implements Runnable {
 					
 				}
 			}
-			else{
-				System.out.println("The recived packet is not for us...");
-			}
+
 		}
 		
 	}
