@@ -13,17 +13,20 @@ public class Sender implements Runnable {
 	byte[] data;
 	int[] window = new int[0]; // Size will be changed in changeWindowSize
 	Random randomGen = new Random();
-	long timeout = (long) 10; // timeout
+	long timeout = (long) 10000; // timeout
 	FrameMaker parser;
 	int seqNum;
 	long runStart;
 	boolean dataSent =false;
-
-	public Sender(RF theRF, byte[] data) {
+	int retry = 0;
+	Receiver receiver;
+	
+	public Sender(RF theRF, byte[] data, Receiver receiver) {
 		System.out.println("Sender: Constructor ran");
 		System.out.println(timeout);
 		this.theRF = theRF;
 		this.data = data;
+		this.receiver = receiver;
 		parser = new FrameMaker();
 		seqNum = parser.getSequnceNumber(data);
 	}
@@ -40,6 +43,7 @@ public class Sender implements Runnable {
 
 			while (theRF.inUse()) {
 				// waiting for the current transmission to end!
+				continue;
 			}
 
 			// wait IFS
@@ -121,10 +125,22 @@ public class Sender implements Runnable {
 	public void transmit() {
 		theRF.transmit(data);
 		boolean gotACK = false;
+		
+		if(retry == RF.dot11RetryLimit){
+			//end
+			retry = 0;
+			System.out.println("I give up!");
+			dataSent = true; //This is a lie!
+			return;
+		}
+		
 		// wait for the right ACK before killing thread!
+		System.out.println("Transmitting...");
 		while (gotACK == false) {
 			//If we have received an ACK for our packet
-			if(Receiver.ACKReceived(seqNum) == true){
+			System.out.println("Checking if we got an ACK...");
+			if(receiver.ACKReceived(seqNum) == true){
+				System.out.println("We got an ACK!");
 				System.out.println("We sent the packet!");
 				dataSent = true;
 				gotACK = true;
@@ -132,8 +148,10 @@ public class Sender implements Runnable {
 				//kill the thread here
 			}
 			// Check for a timeout
-			if(theRF.clock() - runStart == timeout){
+			if(theRF.clock() - runStart >= timeout){
+				System.out.println("TIMEOUT!");
 				runStart = theRF.clock();//restart timeout clock time
+				retry++;
 				transmit();
 				break;
 			}

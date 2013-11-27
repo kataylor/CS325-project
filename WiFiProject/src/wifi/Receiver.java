@@ -15,7 +15,7 @@ public class Receiver implements Runnable {
 	short ourMAC; //our MAC address. Used to determine if incoming packets are for us or not.
 	short broadcastAddress = (short)((Integer.MAX_VALUE >>8) & 0xffff); //the broadcast address is a short of all 1's. (11111111 11111111)
 	ArrayList<byte[]> queue; //the current queue in use; will be changed to a better data structure in the future
-	static ArrayList<Integer> ACKqueue;
+	ArrayList<Integer> ACKqueue;
 	RF theRF;
 	FrameMaker parser;
 	private PrintWriter output;
@@ -54,9 +54,11 @@ public class Receiver implements Runnable {
 		return isValid;
 	}
 	
-	public static boolean ACKReceived(int seqNum){
+	public boolean ACKReceived(int seqNum){
+		System.out.println("In ACKReceived!!!!!!");
 		for(int i = 0; i<ACKqueue.size(); i++){
 			if(ACKqueue.get(i) == seqNum){
+				System.out.println("We found our ACK!");
 				return true;
 			}
 		}
