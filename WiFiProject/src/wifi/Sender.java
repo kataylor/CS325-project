@@ -21,12 +21,11 @@ public class Sender implements Runnable {
 	int retry = 0;
 	Receiver receiver;
 	
-	public Sender(RF theRF, byte[] data, Receiver receiver) {
+	public Sender(RF theRF, byte[] data) {
 		System.out.println("Sender: Constructor ran");
 		System.out.println(timeout);
 		this.theRF = theRF;
 		this.data = data;
-		this.receiver = receiver;
 		parser = new FrameMaker();
 		seqNum = parser.getSequnceNumber(data);
 	}
@@ -41,14 +40,14 @@ public class Sender implements Runnable {
 			}
 			System.out.println("In notIdel!");
 
-			while (theRF.inUse()) {
-				// waiting for the current transmission to end!
-				continue;
-			}
+//			while (theRF.inUse()) {
+//				// waiting for the current transmission to end!
+//				continue;
+//			}
 
 			// wait IFS
 			Thread.sleep(RF.aSIFSTime);
-
+			Thread.sleep(RF.aSIFSTime);
 			// If the medium is not idle restart and change the size of the
 			// window...
 			if (theRF.inUse()) {
@@ -124,38 +123,7 @@ public class Sender implements Runnable {
 	 */
 	public void transmit() {
 		theRF.transmit(data);
-		boolean gotACK = false;
-		
-		if(retry == RF.dot11RetryLimit){
-			//end
-			retry = 0;
-			System.out.println("I give up!");
-			dataSent = true; //This is a lie!
-			return;
-		}
-		
-		// wait for the right ACK before killing thread!
-		System.out.println("Transmitting...");
-		while (gotACK == false) {
-			//If we have received an ACK for our packet
-			System.out.println("Checking if we got an ACK...");
-			if(receiver.ACKReceived(seqNum) == true){
-				System.out.println("We got an ACK!");
-				System.out.println("We sent the packet!");
-				dataSent = true;
-				gotACK = true;
-				break;
-				//kill the thread here
-			}
-			// Check for a timeout
-			if(theRF.clock() - runStart >= timeout){
-				System.out.println("TIMEOUT!");
-				runStart = theRF.clock();//restart timeout clock time
-				retry++;
-				transmit();
-				break;
-			}
-		}
+		dataSent = true;
 
 	}
 
@@ -179,6 +147,7 @@ public class Sender implements Runnable {
 
 				// if no one is currently transmitting and we have waited IFS
 				if (!theRF.inUse() && waitIFS == true) {
+					System.out.println("gonna transmit");
 					transmit();
 				}
 
