@@ -20,13 +20,14 @@ public class Receiver implements Runnable {
 	FrameMaker parser;
 	private PrintWriter output;
 	int[][] sequences;
+	private int debugLevel;
 	
 	/**
 	 * Constructor.
 	 * @param theRF
 	 * @param ourMAC
 	 */
-	public Receiver(RF theRF, short ourMAC, PrintWriter output) { //<<Changed constructor for Address Selectivity
+	public Receiver(RF theRF, short ourMAC, PrintWriter output, int debugLevel) { //<<Changed constructor for Address Selectivity
 		queue = new ArrayList<byte[]>();
 		ACKqueue = new ArrayList<Integer>();
 		this.theRF = theRF;
@@ -34,6 +35,11 @@ public class Receiver implements Runnable {
 		this.ourMAC = ourMAC;
 		this.output = output;
 		sequences = new int[1000][2];
+		this.debugLevel = debugLevel;
+	}
+	
+	public void changeDebugLevel(int newLevel) {
+		debugLevel = newLevel;
 	}
 	
 	/**
@@ -46,7 +52,9 @@ public class Receiver implements Runnable {
 
 		FrameMaker frame = new FrameMaker(packet);
 		short destAddress = frame.getDest(packet);
-		
+		if (debugLevel == 1) {
+			output.println("Received packet for " + destAddress+ " at: " + theRF.clock());
+		}
 		if(destAddress == ourMAC || destAddress == broadcastAddress){
 			isValid = true;
 		}
@@ -71,6 +79,7 @@ public class Receiver implements Runnable {
 		for(;;) {
 			byte[] packet = theRF.receive(); //blocks until something is received 
 			int seq = parser.getSequnceNumber(packet);
+			
 			//ADDED for Address selectivity.
 			//Only packets with our MAC addresses will be queued for delivery.
 			if(forUs(packet)){
@@ -99,7 +108,7 @@ public class Receiver implements Runnable {
 						System.out.println("\t\tgonna send an ack!");
 						byte[] ack = parser.makeACKFrame(dest, ourMAC, 0, seq);
 						try {
-							Thread.sleep(theRF.aSIFSTime);
+							Thread.sleep(RF.aSIFSTime);
 						} catch (InterruptedException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();

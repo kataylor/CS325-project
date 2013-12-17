@@ -38,7 +38,7 @@ public class FrameMaker {
 		if(dest == -1) {
 			dest = (short)((Integer.MAX_VALUE >>8) & 0xffff);
 		}
-		byte[] cont = setControl("000", "0", seq);
+		byte[] cont = setControl("00", "0", seq);
 		byte[] frame = new byte[10 + packetData.length];
 		//Set the control
 		frame[0] = cont[0];
@@ -60,11 +60,16 @@ public class FrameMaker {
 		//Set the control
 		CRC32 crcItem = new CRC32();
 		crcItem.update(frame);
-		long crc = crcItem.getValue();
+		int crc = (int)crcItem.getValue();
 		frame[packetData.length+6] = (byte)(crc);
 		frame[packetData.length+7] = (byte)((crc >> 8) & 0xff);
 		frame[packetData.length+8] = (byte)((crc >> 16) & 0xff);
-		frame[packetData.length+9] = (byte)((crc >> 32) & 0xff);
+		frame[packetData.length+9] = (byte)((crc >> 24) & 0xff);
+//		frame[packetData.length+6] = (byte)255;
+//		frame[packetData.length+7] = (byte)255;
+//		frame[packetData.length+8] = (byte)255;
+//		frame[packetData.length+9] = (byte)255;
+		System.out.println(toBinaryString(frame));
 		return frame;
 	}
 	
