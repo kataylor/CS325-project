@@ -6,11 +6,12 @@ package wifi;
 
 import rf.RF;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.Random;
 
 public class Sender implements Runnable {
 	RF theRF;
-	byte[] data;
 	int[] window = new int[0]; // Size will be changed in changeWindowSize
 	Random randomGen = new Random();
 	long timeout = (long) 1000; // timeout
@@ -21,15 +22,16 @@ public class Sender implements Runnable {
 	int retry = 0; 
 	Receiver receiver;
 	int slotType;
+	public LinkedList<byte[]> queue;
 	
-	public Sender(RF theRF, byte[] data, int slotType) {
+	public Sender(RF theRF, int slotType) {
+		queue = new LinkedList<byte[]>();
 		System.out.println("\tSender: Constructor ran");
 		System.out.println("\t"+timeout);
 		this.theRF = theRF;
-		this.data = data;
 		this.slotType = slotType;
 		parser = new FrameMaker();
-		seqNum = parser.getSequnceNumber(data);
+		seqNum = parser.getSequnceNumber(queue.getFirst());
 	}
 
 	/**
@@ -40,7 +42,7 @@ public class Sender implements Runnable {
 			if(dataSent == true){
 				return;
 			}
-			System.out.println("\tIn notIdel!");
+			System.out.println("\tIn notIdle!");
 
 //			while (theRF.inUse()) {
 //				// waiting for the current transmission to end!
@@ -127,43 +129,52 @@ public class Sender implements Runnable {
 	 * Thread. Will resend the data if a timeout accrues while waiting for the ACK.
 	 */
 	public void transmit() {
-		theRF.transmit(data);
+		theRF.transmit(queue.removeFirst());
 		dataSent = true;
-
 	}
 
 	public void run() {
-		runStart = theRF.clock(); // used to check for timeout
-		try {
-			boolean waitIFS = false;
-
-			System.out.println("\tSending.....");
-			while (dataSent == false) {
-				// if no one is currently transmitting and we have not waited IFS yet
-				if (!theRF.inUse() && waitIFS == false) {
-					System.out.println("\tWaiting...");
-					Thread.sleep(RF.aSIFSTime); // wait for the interframe time.
-					System.out.println("\tDone wainting.");
-					waitIFS = true; // Set waitIFS to true for next iteration of
-									// the loop.
-					continue;
+		if(queue.size() > 0) {
+			runStart = theRF.clock(); // used to check for timeout
+			try {
+				boolean waitIFS = false;
+	
+				System.out.println("\tSending.....");
+				while (dataSent == false) {
+					// if no one is currently transmitting and we have not waited IFS yet
+					if (!theRF.inUse() && waitIFS == false) {
+						System.out.println("\tWaiting...");
+						Thread.sleep(RF.aSIFSTime); // wait for the interframe time.
+						System.out.println("\tDone wainting.");
+						waitIFS = true; // Set waitIFS to true for next iteration of
+										// the loop.
+						continue;
+					}
+	
+					// if no one is currently transmitting and we have waited IFS
+					else if (!theRF.inUse() && waitIFS == true) {
+						System.out.println("\tgonna transmit");
+						transmit();
+					}
+	
+					// if the medium is busy
+					else if (theRF.inUse()) {
+						System.out.println("\tThe chanel is busy!");
+						notIdle();
+					}
 				}
-
-				// if no one is currently transmitting and we have waited IFS
-				else if (!theRF.inUse() && waitIFS == true) {
-					System.out.println("\tgonna transmit");
-					transmit();
-				}
-
-				// if the medium is busy
-				else if (theRF.inUse()) {
-					System.out.println("\tThe chanel is busy!");
-					notIdle();
-				}
+			} catch (InterruptedException ie) {
+				ie.printStackTrace();
 			}
-		} catch (InterruptedException ie) {
-			ie.printStackTrace();
+			System.out.println("\tSent.");
 		}
-		System.out.println("\tSent.");
+		else {
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 	}
 }
