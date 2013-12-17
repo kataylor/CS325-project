@@ -40,7 +40,6 @@ public class Receiver implements Runnable {
 	 * Get the destination address of the received packet.
 	 * 
 	 * @return isValid is true if the incoming packet has our MAC address or if it has the broadcastAddress.
-	 * @author Christoper Livingston
 	 */
 	public boolean forUs(byte[] packet){
 		boolean isValid = false; 
@@ -55,10 +54,10 @@ public class Receiver implements Runnable {
 	}
 	
 	public boolean ACKReceived(int seqNum){
-		System.out.println("In ACKReceived!!!!!!");
+		System.out.println("\t\tIn ACKReceived!!!!!!");
 		for(int i = 0; i<ACKqueue.size(); i++){
 			if(ACKqueue.get(i) == seqNum){
-				System.out.println("We found our ACK!");
+				System.out.println("\t\tWe found our ACK!");
 				return true;
 			}
 		}
@@ -76,7 +75,8 @@ public class Receiver implements Runnable {
 			//Only packets with our MAC addresses will be queued for delivery.
 			if(forUs(packet)){
 				if(parser.isACK(packet) == true) {
-					System.out.println("The seqnum is: " + seq);
+					System.out.println("\t\tThe seqnum is: " + seq);
+					System.out.println("\t\tAdding ACK with seqnum " + seq + " to the queue");
 					ACKqueue.add(seq);
 					continue;
 				}
@@ -88,15 +88,15 @@ public class Receiver implements Runnable {
 				}
 				else {
 					if(seq > (sequences[dest][1])+1) {
-						System.out.println("seq is " + seq + " and had stored " + sequences[dest][1]);
-						output.println("Gap detected in packet arrival!");
+						System.out.println("\t\tseq is " + seq + " and had stored " + sequences[dest][1]);
+						output.println("\t\tGap detected in packet arrival!");
 					}
 					sequences[dest][1] = seq;
 				}
 				if(wasRecvd == false) {
 					queue.add(packet); //add received item to the queue
 					if(parser.getDest(packet) != broadcastAddress) {
-						System.out.println("gonna send an ack!");
+						System.out.println("\t\tgonna send an ack!");
 						byte[] ack = parser.makeACKFrame(dest, ourMAC, 0, seq);
 						try {
 							Thread.sleep(theRF.aSIFSTime);

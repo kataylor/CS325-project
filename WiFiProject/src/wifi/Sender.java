@@ -17,15 +17,17 @@ public class Sender implements Runnable {
 	FrameMaker parser;
 	int seqNum;
 	long runStart;
-	boolean dataSent =false;
-	int retry = 0;
+	boolean dataSent = false;
+	int retry = 0; 
 	Receiver receiver;
+	int slotType;
 	
-	public Sender(RF theRF, byte[] data) {
-		System.out.println("Sender: Constructor ran");
-		System.out.println(timeout);
+	public Sender(RF theRF, byte[] data, int slotType) {
+		System.out.println("\tSender: Constructor ran");
+		System.out.println("\t"+timeout);
 		this.theRF = theRF;
 		this.data = data;
+		this.slotType = slotType;
 		parser = new FrameMaker();
 		seqNum = parser.getSequnceNumber(data);
 	}
@@ -38,7 +40,7 @@ public class Sender implements Runnable {
 			if(dataSent == true){
 				return;
 			}
-			System.out.println("In notIdel!");
+			System.out.println("\tIn notIdel!");
 
 //			while (theRF.inUse()) {
 //				// waiting for the current transmission to end!
@@ -46,7 +48,6 @@ public class Sender implements Runnable {
 //			}
 
 			// wait IFS
-			Thread.sleep(RF.aSIFSTime);
 			Thread.sleep(RF.aSIFSTime);
 			// If the medium is not idle restart and change the size of the
 			// window...
@@ -58,6 +59,7 @@ public class Sender implements Runnable {
 			// If the medium is idle.
 			if (!theRF.inUse()) {
 				// backoff and transmit.
+				
 				backOff();
 			}
 		} catch (InterruptedException ie) {
@@ -66,7 +68,7 @@ public class Sender implements Runnable {
 	}
 
 	public void changeWindowSize() {
-		System.out.println("Changing the window size!");
+		System.out.println("\tChanging the window size!");
 		if (window.length == 0) {
 			window = new int[RF.aCWmin];
 		} else {
@@ -90,26 +92,31 @@ public class Sender implements Runnable {
 	 * Exponential back off and then transmit.
 	 */
 	public void backOff() {
-
 		if (window.length == 0) {
 			changeWindowSize();
 		}
 
 		try {
-			// Pick a random value from the window.
-			int ranVal = randomGen.nextInt(window.length - 1);
-			int waitTime = window[ranVal];
-
-			// wait for the selected time.
-			Thread.sleep(waitTime * 100);
-
-			if (theRF.inUse()) {
-				Thread.sleep(RF.aSIFSTime);
+			if(slotType == 1){ //pick the maximum value from the window always...
+				int waitTime = window[window.length-1];
+				long currentTime = theRF.clock();
+				long round = currentTime % 50;
+				Thread.sleep((waitTime+round) * 100);
+				//transmit the frame
+				transmit();
 			}
+			else{ //pick a random value from the window...
+				int ranVal = randomGen.nextInt(window.length - 1);
+				int waitTime = window[ranVal];
+				long currentTime = theRF.clock();
+				long round = currentTime % 50;
+				// wait for the selected time.
+				Thread.sleep((waitTime+round) * 100);
 
-			// Transmit the frame
-			transmit();
-			
+				// Transmit the frame
+				transmit();
+				
+			}
 		} catch (InterruptedException ie) {
 			ie.printStackTrace();
 		}
@@ -118,8 +125,6 @@ public class Sender implements Runnable {
 	/**
 	 * Transmits the given frame. Will wait until an ACK is received before killing the 
 	 * Thread. Will resend the data if a timeout accrues while waiting for the ACK.
-	 * 
-	 * @author christoperlivingston
 	 */
 	public void transmit() {
 		theRF.transmit(data);
@@ -129,37 +134,36 @@ public class Sender implements Runnable {
 
 	public void run() {
 		runStart = theRF.clock(); // used to check for timeout
-
 		try {
 			boolean waitIFS = false;
 
-			System.out.println("Sending.....");
+			System.out.println("\tSending.....");
 			while (dataSent == false) {
 				// if no one is currently transmitting and we have not waited IFS yet
 				if (!theRF.inUse() && waitIFS == false) {
-					System.out.println("Waiting...");
+					System.out.println("\tWaiting...");
 					Thread.sleep(RF.aSIFSTime); // wait for the interframe time.
-					System.out.println("Done wainting.");
+					System.out.println("\tDone wainting.");
 					waitIFS = true; // Set waitIFS to true for next iteration of
 									// the loop.
 					continue;
 				}
 
 				// if no one is currently transmitting and we have waited IFS
-				if (!theRF.inUse() && waitIFS == true) {
-					System.out.println("gonna transmit");
+				else if (!theRF.inUse() && waitIFS == true) {
+					System.out.println("\tgonna transmit");
 					transmit();
 				}
 
 				// if the medium is busy
-				if (theRF.inUse()) {
-					System.out.println("The chanel is busy!");
+				else if (theRF.inUse()) {
+					System.out.println("\tThe chanel is busy!");
 					notIdle();
 				}
 			}
 		} catch (InterruptedException ie) {
 			ie.printStackTrace();
 		}
-		System.out.println("Sent.");
+		System.out.println("\tSent.");
 	}
 }
