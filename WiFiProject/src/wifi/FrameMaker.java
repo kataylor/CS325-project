@@ -1,5 +1,7 @@
 package wifi;
 
+import java.util.zip.CRC32;
+
 public class FrameMaker {
 	
 	/**
@@ -32,7 +34,10 @@ public class FrameMaker {
 	 * @param crc The checksum
 	 * @return A byte array of the data frame
 	 */
-	public byte[] makeDataFrame(short dest, short src, int crc, int seq) {
+	public byte[] makeDataFrame(short dest, short src, int seq) {
+		if(dest == -1) {
+			dest = (short)((Integer.MAX_VALUE >>8) & 0xffff);
+		}
 		byte[] cont = setControl("000", "0", seq);
 		byte[] frame = new byte[10 + packetData.length];
 		//Set the control
@@ -53,16 +58,19 @@ public class FrameMaker {
 		}
 		
 		//Set the control
-		frame[packetData.length+6] = (byte)255;
-		frame[packetData.length+7] = (byte)255;
-		frame[packetData.length+8] = (byte)255;
-		frame[packetData.length+9] = (byte)255;
+		CRC32 crcItem = new CRC32();
+		crcItem.update(frame);
+		long crc = crcItem.getValue();
+		frame[packetData.length+6] = (byte)(crc);
+		frame[packetData.length+7] = (byte)((crc >> 8) & 0xff);
+		frame[packetData.length+8] = (byte)((crc >> 16) & 0xff);
+		frame[packetData.length+9] = (byte)((crc >> 32) & 0xff);
 		return frame;
 	}
 	
 	
 	public byte[] makeACKFrame(short dest, short src, int crc, int seq) {
-		byte[] cont = setControl("001", "0", seq);
+		byte[] cont = setControl("01", "0", seq);
 		byte[] frame = new byte[10];
 		frame[0] = cont[0];
 		frame[1] = cont[1];
@@ -86,20 +94,23 @@ public class FrameMaker {
 	 * @return Returns a binary array of the control information
 	 */
 	public byte[] setControl(String type, String retry, int sequence) {
-		String seq = Integer.toBinaryString(sequence);
-		String total = seq;
-		int totalLength = total.length();
+		String total = type + retry;
+		String seqNum = Integer.toBinaryString(sequence);
+		int totalLength = seqNum.length();
 		String zeroes = "";
-		while(totalLength < 16) {
+		while(totalLength < 12) {
 			zeroes = zeroes + "0";
 			totalLength++;
 		}
-		total = zeroes + total;
-		total = type + retry + total;
+		String totalSeq = zeroes + seqNum;
+		total = total + totalSeq;
 		byte[] b = new byte[2];
 				//new BigInteger(total, 2).toByteArray();
 		b[0] = Byte.parseByte(total.substring(0, 7), 2);
 		b[1] = Byte.parseByte(total.substring(8), 2);
+		System.out.println(type);
+		System.out.println(total);
+		System.out.println(toBinaryString(b));
 		return b;
 	}
 
