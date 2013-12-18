@@ -1,7 +1,11 @@
 package wifi;
 
+import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+
 import rf.RF;
 
 /**
@@ -21,6 +25,11 @@ public class Receiver implements Runnable {
 	private PrintWriter output;
 	int[][] sequences;
 	private int debugLevel;
+	public long beaconArrivalTime;
+	public long beaconEndTime;
+	public int average;
+	public long totalAverage;
+	public long total;
 	
 	/**
 	 * Constructor.
@@ -29,6 +38,9 @@ public class Receiver implements Runnable {
 	 */
 	public Receiver(RF theRF, short ourMAC, PrintWriter output, int debugLevel) { //<<Changed constructor for Address Selectivity
 		queue = new ArrayList<byte[]>();
+		beaconArrivalTime = 0;
+		totalAverage = 0;
+		beaconEndTime = 0;
 		ACKqueue = new ArrayList<Integer>();
 		this.theRF = theRF;
 		parser = new FrameMaker();
@@ -36,6 +48,8 @@ public class Receiver implements Runnable {
 		this.output = output;
 		sequences = new int[1000][2];
 		this.debugLevel = debugLevel;
+		total = 0;
+		average = 0;
 	}
 	
 	public void changeDebugLevel(int newLevel) {
@@ -72,6 +86,46 @@ public class Receiver implements Runnable {
 		return false;
 	}
 	
+	public void handleBeacon(byte[] data) {
+		byte[] time = parser.getData(data);
+		String s = parser.toBinaryString(time);
+		long newTime = Long.parseLong(s, 2);
+		newTime = newTime + 2;
+		if(newTime > theRF.clock()) {
+			String name = System.getProperty("os.name").toLowerCase();
+			if(name.startsWith("win")) {
+				SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
+				Calendar cal = Calendar.getInstance();
+			    cal.setTimeInMillis(newTime);
+			    try {
+					Runtime.getRuntime().exec("cmd /C time " + format.format(cal.getTime()));
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			if(name.indexOf("nix") >= 0 || name.indexOf("nux") >= 0) {
+				Calendar cal = Calendar.getInstance();
+			    cal.setTimeInMillis(newTime);
+			    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SS");
+				try {
+					Runtime.getRuntime().exec(new String[]{"date","--set", format.format(cal.getTime())});
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+//		beaconEndTime = theRF.clock();
+//		total = total + (beaconEndTime - beaconArrivalTime);
+//		System.out.println(total);
+//		average++;
+//		System.out.println("beacon was carrying time: " + newTime);
+//		if(average == 10) {
+//			totalAverage = total/average;
+//			System.out.println("Average time to process a beacon: " + totalAverage);
+//		}
+	}
+	
 	/**
 	 * 
 	 */
@@ -87,6 +141,11 @@ public class Receiver implements Runnable {
 					System.out.println("\t\tThe seqnum is: " + seq);
 					System.out.println("\t\tAdding ACK with seqnum " + seq + " to the queue");
 					ACKqueue.add(seq);
+					continue;
+				}
+				if(parser.isBeacon(packet) == true) {
+					beaconArrivalTime = theRF.clock();
+					handleBeacon(packet);
 					continue;
 				}
 				short dest = parser.getSrc(packet);

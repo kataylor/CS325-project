@@ -23,6 +23,9 @@ public class LinkLayer implements Dot11Interface {
 	private int beaconInterval;
 	private int status;
 	private int senderSize;
+	private beaconSender beacons;
+	public long testInt;
+	public int testInt2;
 
 	/**
 	 * Constructor takes a MAC address and the PrintWriter to which our output
@@ -33,9 +36,11 @@ public class LinkLayer implements Dot11Interface {
 	 *           
 	 */
 	public LinkLayer(short ourMAC, PrintWriter output) {
+		testInt = 0;
+		testInt2 = 0;
 		debugLevel = 0;
 		slotSelection = 0;
-		beaconInterval = 0;
+		beaconInterval = -1;
 		senderSize = 0;
 		sequenceTable = new Integer[1000][2];
 		this.ourMAC = ourMAC;
@@ -50,6 +55,8 @@ public class LinkLayer implements Dot11Interface {
 		(new Thread(receiver)).start();
 		sender = new Sender(theRF, slotSelection, output, debugLevel);
 		(new Thread(sender)).start();
+		beacons = new beaconSender(beaconInterval);
+		(new Thread(beacons)).start();
 		status = 1;
 	}
 
@@ -134,7 +141,7 @@ public class LinkLayer implements Dot11Interface {
 				output.println("Status:  " + status());
 			}
 			FrameMaker parser = new FrameMaker();
-			if (parser.isACK(data) || dest == -1) {
+			if (parser.isACK(data) || dest == -1 || parser.isBeacon(data)) {
 
 			} else {
 				ackChecker ackCheck = new ackChecker(theDataFrame, seq);
@@ -287,6 +294,7 @@ public class LinkLayer implements Dot11Interface {
 		if (cmd == 3) {
 			if (val > -2 && val < 100) {
 				beaconInterval = val;
+				beacons.changeRate(beaconInterval);
 				output.println("Beacon interval set to: " + beaconInterval);
 			} else {
 				output.println("Please select a valid beacon interval time");
@@ -346,6 +354,77 @@ public class LinkLayer implements Dot11Interface {
 					status = 2;
 				}
 			}
+		}
+	}
+	
+	
+	public class beaconSender implements Runnable {
+		public int sendRate;
+		
+		public beaconSender(int sendRate) {
+			this.sendRate = sendRate*1000;
+			
+		}
+		
+		public void changeRate(int newVal) {
+			sendRate = newVal*1000;
+		}
+		
+		public void run() {
+			for(;;) {
+				if(sendRate > 0) {
+					testInt2++;
+					try {
+						Thread.sleep(sendRate);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					long ts = theRF.clock();
+					testInt = testInt + ts;
+					byte[] time = new byte[8];
+					time[0] = (byte)(ts >>> 56);
+				    time[1] = (byte)(ts >>> 48);
+				    time[2] = (byte)(ts >>> 40);
+				    time[3] = (byte)(ts >>> 32);
+				    time[4] = (byte)(ts >>> 24);
+				    time[5] = (byte)(ts >>> 16);
+				    time[6] = (byte)(ts >>>  8);
+				    time[7] = (byte)(ts >>>  0);
+					FrameMaker beaconMaker = new FrameMaker(time);
+					byte[] beacon = beaconMaker.makeBeaconFrame(ourMAC, 0, 0);
+					if(senderSize <= 3) {
+						sender.queue.add(beacon);
+						senderSize++;
+					}
+				}
+				else {
+					try {
+						Thread.sleep(100);
+					} catch (InterruptedException e) {
+						status = 2;
+					}
+					if(testInt2 == 10) {
+						testInt = testInt/testInt2;
+						System.out.println("the average creation time is: " + testInt);
+					}
+				}
+			}
+		}
+		
+		public long interpretArray(byte[] time) {
+			String s = toBinaryString(time);
+			long newTime = Long.parseLong(s, 2);
+			return newTime;
+		}
+		
+		public String toBinaryString(byte[] frame){
+			String binaryString = ""; // Initialize a new empty String.
+			for(int i=0; i<=frame.length-1; i++){
+				binaryString += ("0000000"+Integer.toBinaryString(0xFF & frame[i])).replaceAll(".*(.{8})$", "$1");
+			}
+			//System.out.println("The binary representation of this frame is: " + binaryString);
+			return binaryString;
 		}
 	}
 }

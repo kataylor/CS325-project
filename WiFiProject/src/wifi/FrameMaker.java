@@ -2,6 +2,7 @@ package wifi;
 
 import java.util.zip.CRC32;
 
+
 public class FrameMaker {
 	
 	/**
@@ -58,19 +59,51 @@ public class FrameMaker {
 		}
 		
 		//Set the control
-		CRC32 crcItem = new CRC32();
-		crcItem.update(frame);
-		int crc = (int)crcItem.getValue();
-		frame[packetData.length+6] = (byte)(crc);
-		frame[packetData.length+7] = (byte)((crc >> 8) & 0xff);
-		frame[packetData.length+8] = (byte)((crc >> 16) & 0xff);
-		frame[packetData.length+9] = (byte)((crc >> 24) & 0xff);
+//		byte[] tocrc = new byte[packetData.length+6];
+//		tocrc = frame;
+//		CRC32 crcItem = new CRC32();
+//		crcItem.update(tocrc);
+//		Long crcL = crcItem.getValue();
+//		int i = crcL.intValue();  
+//		ByteBuffer buffer = ByteBuffer.allocate(4);
+//		buffer.order(ByteOrder.BIG_ENDIAN);
+//		buffer.putInt(i);  
+//		byte[] b = buffer.array(); 
+//		b[0] = Byte.parseByte(crcs.substring(0, 7), 2);
+//		b[1] = Byte.parseByte(crcs.substring(8, 15), 2);
+//		b[2] = Byte.parseByte(crcs.substring(16, 23), 2);
+//		b[3] = Byte.parseByte(crcs.substring(24, 31), 2);
+//		frame[packetData.length+6] = b[0];
+//		frame[packetData.length+7] = b[1];
+//		frame[packetData.length+8] = b[2];
+//		frame[packetData.length+9] = b[3];
+//		frame[packetData.length+6] = (byte)(crc);
+//		frame[packetData.length+7] = (byte)((crc >> 8) & 0x0000ffff);
+//		frame[packetData.length+8] = (byte)((crc >> 16) & 0x0000ffff);
+//		frame[packetData.length+9] = (byte)((crc >> 24) & 0x0000ffff);
 //		frame[packetData.length+6] = (byte)255;
 //		frame[packetData.length+7] = (byte)255;
 //		frame[packetData.length+8] = (byte)255;
 //		frame[packetData.length+9] = (byte)255;
-		System.out.println(toBinaryString(frame));
-		return frame;
+//		System.out.println(toBinaryString(frame));
+//		return frame;
+		//Set the control
+		CRC32 crcItem = new CRC32();
+		crcItem.update(frame); //update the crc with our frame
+		Long crcValue = crcItem.getValue(); //get the crc value for our frame
+		Integer intVal = crcValue.intValue();
+
+		//Deep copy frame into new, bigger frame.
+		byte[] newFrame = new byte[10 + packetData.length];
+		for(int i =0; i< frame.length; i++){
+		newFrame[i] = frame[i];
+		}
+
+		newFrame[packetData.length+9] = (byte)(intVal & 0xff);
+		newFrame[packetData.length+8] = (byte)((intVal >> 8) & 0xff);
+		newFrame[packetData.length+7] = (byte)((intVal >> 16) & 0xff);
+		newFrame[packetData.length+6] = (byte)((intVal >> 24) & 0xff);
+		return newFrame;
 	}
 	
 	
@@ -87,6 +120,27 @@ public class FrameMaker {
 		frame[7] = (byte)255;
 		frame[8] = (byte)255;
 		frame[9] = (byte)255;
+		return frame;
+	}
+	
+	
+	public byte[] makeBeaconFrame(short src, int crc, int seq) {
+		short dest = (short)((Integer.MAX_VALUE >>8) & 0xffff);
+		byte[] cont = setControl("10", "0", seq);
+		byte[] frame = new byte[10 + packetData.length];
+		frame[0] = cont[0];
+		frame[1] = cont[1];
+		frame[3] = (byte)(dest);
+		frame[2] = (byte)((dest >> 8) & 0xff);
+		frame[5] = (byte)(src);
+		frame[4] = (byte)((src >> 8) & 0xff);
+		for(int i = 0; i < packetData.length; i++) {
+			frame[i+6] = packetData[i];
+		}
+		frame[packetData.length+6] = (byte)255;
+		frame[packetData.length+7] = (byte)255;
+		frame[packetData.length+8] = (byte)255;
+		frame[packetData.length+9] = (byte)255;
 		return frame;
 	}
 	
@@ -110,12 +164,8 @@ public class FrameMaker {
 		String totalSeq = zeroes + seqNum;
 		total = total + totalSeq;
 		byte[] b = new byte[2];
-				//new BigInteger(total, 2).toByteArray();
 		b[0] = Byte.parseByte(total.substring(0, 7), 2);
 		b[1] = Byte.parseByte(total.substring(8), 2);
-		System.out.println(type);
-		System.out.println(total);
-		System.out.println(toBinaryString(b));
 		return b;
 	}
 
@@ -170,6 +220,14 @@ public class FrameMaker {
 		return false;
 	}
 	
+	
+	public boolean isBeacon(byte[] packet) {
+		String pack = toBinaryString(packet);
+		if(pack.startsWith("010") == true) {
+			return true;
+		}
+		return false;
+	}
 	
 	/**
 	 * Returns a binary representation of the frame.
